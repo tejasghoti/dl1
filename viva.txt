@@ -1,0 +1,771 @@
+================================================================================
+                    SPPU LP-IV DEEP LEARNING PRACTICAL EXAM
+                  COMPREHENSIVE VIVA & CODE REFERENCE GUIDE
+================================================================================
+Author: Laboratory Practice IV (Deep Learning) Revision Guide
+Platform: Python 3.11 / TensorFlow 2.x / Keras / Scikit-Learn / Gensim
+Working Directory: /Users/tejas/Desktop/prac
+Generated for: SPPU LP-IV Final Practical Examination
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+1. GLOBAL DEEP LEARNING FUNDAMENTALS & VIVA CONCEPTS
+2. GROUP 1: FEEDFORWARD NEURAL NETWORKS (1A, 1B, 1C, 1E)
+3. GROUP 2: CONVOLUTIONAL NEURAL NETWORKS (2A, 2B, 2C)
+4. GROUP 3: AUTOENCODERS FOR ANOMALY DETECTION (3A, 3C, 3D, 3F, ECG)
+5. GROUP 4: CONTINUOUS BAG OF WORDS (CBOW) & WORD2VEC (4A, 4B, 4C, 4D)
+6. GROUP 5: TRANSFER LEARNING & FINE-TUNING WITH VGG16 (5A, 5B, 5C)
+7. LAB SURVIVAL GUIDE: RUNNING CODES, COMMON ERRORS & INSTANT FIXES
+================================================================================
+
+
+================================================================================
+1. GLOBAL DEEP LEARNING FUNDAMENTALS & VIVA CONCEPTS
+================================================================================
+
+Q1: What is a Neuron / Perceptron?
+A: A perceptron is the fundamental building unit of an artificial neural network.
+   It takes multiple numerical inputs (x_1, x_2, ..., x_n), multiplies each by an
+   associated weight (w_1, w_2, ..., w_n), adds a bias term (b), and passes the
+   sum through an activation function f(z) to produce the output:
+       y = f( sum(w_i * x_i) + b )
+
+Q2: Why do we need Non-Linear Activation Functions?
+A: If we do not use an activation function (or use a linear one), a neural network
+   with 100 layers is mathematically identical to a single linear regression model.
+   Non-linear activations allow networks to learn non-linear decision boundaries
+   and approximate any arbitrary complex function (Universal Approximation Theorem).
+
+Q3: Explain the common Activation Functions:
+A: 1. ReLU (Rectified Linear Unit):
+      - Formula: f(z) = max(0, z)
+      - Used in: Hidden layers of FNN and CNN.
+      - Advantage: Fast to compute; avoids vanishing gradient for positive values.
+      - Disadvantage: "Dying ReLU" when activations become strictly negative.
+   2. Sigmoid:
+      - Formula: f(z) = 1 / (1 + e^(-z))
+      - Range: (0, 1)
+      - Used in: Output layer for binary classification, and output of Autoencoders
+        reconstructing normalized (0-1) features.
+   3. Softmax:
+      - Formula: Softmax(z_i) = exp(z_i) / sum(exp(z_j))
+      - Range: (0, 1), and sum of all class probabilities = 1.0.
+      - Used in: Output layer for multi-class classification.
+   4. Tanh (Hyperbolic Tangent):
+      - Range: (-1, 1). Zero-centered version of sigmoid.
+
+Q4: How do you choose the right Loss Function?
+A: 1. Binary Crossentropy:
+      - Used for: 2 classes (Binary).
+      - Output layer: 1 neuron with `sigmoid` activation.
+      - Example: Spam detection, positive/negative sentiment (4A IMDb).
+   2. Categorical Crossentropy:
+      - Used for: >2 classes where target labels are ONE-HOT ENCODED
+        e.g., [0, 1, 0, 0].
+      - Output layer: N neurons with `softmax` activation.
+      - Used in: 1A, 1B, 1C, 1E, 2A, 2B, 2C.
+   3. Sparse Categorical Crossentropy:
+      - Used for: >2 classes where targets are plain INTEGERS e.g., 0, 1, 2, ...
+      - Output layer: N neurons with `softmax`.
+      - Used in: 5A, 5B, 5C (Transfer Learning image directories).
+   4. Mean Squared Error (MSE) / Mean Absolute Error (MAE):
+      - Used for: Regression and Autoencoders (measuring reconstruction difference).
+
+Q5: What is the difference between SGD, Momentum, and Adam Optimizers?
+A: - SGD (Stochastic Gradient Descent): Updates parameters using gradients from
+     small random minibatches: W = W - lr * grad. Can get stuck in local minima
+     or saddle points.
+   - Adam (Adaptive Moment Estimation): Combines Momentum (moving average of past
+     gradients) + RMSprop (moving average of squared gradients). Adapts learning
+     rate dynamically per parameter. Usually converges much faster than basic SGD.
+
+Q6: Why do we normalize pixel values by dividing by 255.0?
+A: Raw pixel values range from 0 to 255. High input values cause large gradients,
+   causing weight updates to oscillate wildly or saturate sigmoid/tanh activations
+   (vanishing gradient). Normalizing to [0.0, 1.0] scales all input features to
+   the same range, enabling faster convergence and numerical stability.
+
+Q7: What is Overfitting and how do we prevent it?
+A: Overfitting occurs when the model memorizes training data (very low training loss)
+   but fails on unseen test data (high test loss).
+   Prevention techniques:
+   1. Dropout (randomly deactivates neurons during training to prevent co-adaptation).
+   2. L1/L2 Weight Regularization (penalizes large weights).
+   3. Early Stopping (stops training when validation loss stops improving).
+   4. Data Augmentation (rotation, zoom, flipping to artificially increase data diversity).
+
+Q8: What is the Epoch, Batch Size, and Iteration?
+A: - Epoch: One complete pass through the entire training dataset.
+   - Batch Size: Number of training samples processed before updating model weights.
+   - Iteration: Number of batches needed to complete one epoch.
+     Formula: Iterations per Epoch = Total Samples / Batch Size.
+
+
+================================================================================
+2. GROUP 1: FEEDFORWARD NEURAL NETWORKS (FNN)
+================================================================================
+Problem Statements Covered:
+- 1A: Handwritten MNIST Dataset (Keras & TF, SGD, 11 epochs)
+- 1B: Fashion MNIST Dataset (Keras & TF, SGD, 11 epochs)
+- 1C: CIFAR-10 Dataset (Keras & TF, SGD/Adam, 11 epochs)
+- 1E: Sign Language MNIST Dataset (Keras & TF, SGD/Adam, 11 epochs)
+
+Python Files:
+`fnn_1A_mnist.py`, `fnn_1B_fashion.py`, `fnn_1C_cifar10.py`, `fnn_1E_sign_mnist.py`
+
+--------------------------------------------------------------------------------
+HOW THE CODE WORKS STEP-BY-STEP
+--------------------------------------------------------------------------------
+1. Data Loading:
+   - For 1A, 1B, 1E: Read train and test CSVs.
+     First column = label, remaining 784 columns = 28x28 pixel intensities.
+   - For 1C (CIFAR-10): Single CSV with 3073 columns (3072 pixel values + 1 label).
+     Split into 80% train and 20% test using `train_test_split()`.
+2. Normalization:
+   - Pixels are divided by 255.0: `x_train = x_train / 255.0`.
+3. One-Hot Encoding:
+   - `lb = LabelBinarizer(); y_train = lb.fit_transform(y_train)`.
+   - Converts integer label (e.g. 3) to 10-element vector [0, 0, 0, 1, 0, 0, 0, 0, 0, 0].
+4. Model Architecture:
+   ```python
+   model = keras.Sequential([
+       layers.Dense(128, activation="relu", input_shape=(x_train.shape[1],)),
+       layers.Dense(64, activation="relu"),
+       layers.Dense(num_classes, activation="softmax")
+   ])
+   ```
+5. Compilation:
+   - 1A & 1B use: `model.compile(optimizer="sgd", loss="categorical_crossentropy", metrics=["accuracy"])`
+   - 1C & 1E use: `model.compile(optimizer="adam", ...)`
+6. Training:
+   - `model.fit(x_train, y_train, epochs=11, batch_size=128, validation_split=0.1)`
+   - 10% of training data is kept aside as validation data to monitor loss per epoch.
+7. Evaluation & Visualization:
+   - `model.evaluate(x_test, y_test)` prints test loss and test accuracy.
+   - `plt.plot()` plots the accuracy and loss curves for train vs validation.
+
+--------------------------------------------------------------------------------
+CRUCIAL DATASET SPECIFICS FOR VIVA
+--------------------------------------------------------------------------------
+* Handwritten MNIST: 10 classes (digits 0 to 9), 28x28 grayscale = 784 pixels.
+* Fashion MNIST: 10 classes (T-shirt, Trouser, Pullover, Dress, Coat, Sandal,
+  Shirt, Sneaker, Bag, Ankle boot), 28x28 grayscale = 784 pixels.
+* Sign Language MNIST: 24 classes (letters A-Z except J & Z because they require motion).
+  28x28 grayscale = 784 pixels.
+* CIFAR-10: 10 classes (airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck).
+  32x32 color images (RGB) = 32 x 32 x 3 = 3072 pixels!
+  In the CSV, pixels are stored channel by channel (all reds, then greens, then blues).
+  Therefore, to plot an image: `x[i].reshape(3, 32, 32).transpose(1, 2, 0)`.
+
+--------------------------------------------------------------------------------
+VIVA QUESTIONS SPECIFIC TO GROUP 1
+--------------------------------------------------------------------------------
+Q: Why do we call this Feedforward?
+A: Information moves strictly in one direction—forward—from the input nodes, through
+   hidden nodes, to the output nodes. There are no cycles or backward feedback loops.
+
+Q: Why do we use Softmax in the final layer?
+A: Softmax converts raw output logits into a valid probability distribution where
+   each value is between 0 and 1, and the sum of all class probabilities equals 1.0.
+
+Q: How many parameters are in the first layer?
+A: Formula: (Inputs * Neurons) + Biases
+   For MNIST (784 inputs) and 128 neurons:
+   Params = (784 * 128) + 128 = 100,352 + 128 = 100,480 parameters.
+
+Q: What is the limitation of FNN on images?
+A: FNN flattens 2D images into 1D vectors, destroying all 2D spatial arrangement
+   and neighborhood relationships among pixels. It also requires too many parameters
+   if image resolution is high. This is why CNN is preferred for computer vision.
+
+
+================================================================================
+3. GROUP 2: CONVOLUTIONAL NEURAL NETWORKS (CNN)
+================================================================================
+Problem Statements Covered:
+- 2A: CIFAR-10 Dataset Classification using CNN (4 stages)
+- 2B: Handwritten MNIST Dataset Classification using CNN (4 stages)
+- 2C: Sign Language MNIST Classification using CNN (4 stages)
+
+Python Files:
+`cnn_2A_cifar10.py`, `cnn_2B_mnist.py`, `cnn_2C_sign_mnist.py`
+
+--------------------------------------------------------------------------------
+THE 4 STAGES SPECIFIED BY SPPU
+--------------------------------------------------------------------------------
+Stage a: Loading and Preprocessing
+   1. Load CSV and extract pixel features and labels.
+   2. Normalize pixel intensities by dividing by 255.0.
+   3. Reshape 1D flat vector into 4D tensor: `(batch_size, height, width, channels)`.
+      - For 2B (MNIST) & 2C (Sign): `x_train.reshape(-1, 28, 28, 1)`
+      - For 2A (CIFAR-10): `x_train.reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)` -> `(-1, 32, 32, 3)`
+   4. One-hot encode targets using `LabelBinarizer()`.
+
+Stage b: Defining Architecture
+   ```python
+   model = keras.Sequential([
+       layers.Conv2D(32, (3, 3), activation="relu", input_shape=x_train.shape[1:]),
+       layers.MaxPooling2D((2, 2)),
+       layers.Flatten(),
+       layers.Dense(64, activation="relu"),
+       layers.Dense(num_classes, activation="softmax")
+   ])
+   ```
+
+Stage c: Training the Model
+   ```python
+   model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
+   history = model.fit(x_train, y_train, epochs=5, batch_size=128, validation_split=0.1)
+   ```
+
+Stage d: Estimating Performance
+   ```python
+   loss, accuracy = model.evaluate(x_test, y_test)
+   # Plot training vs validation accuracy and loss curves
+   ```
+
+--------------------------------------------------------------------------------
+VIVA QUESTIONS SPECIFIC TO GROUP 2
+--------------------------------------------------------------------------------
+Q: Why is CNN better than FNN for images?
+A: 1. Local Receptive Fields: CNN connects a neuron to only a small local region
+      of pixels, detecting local features (edges, corners).
+   2. Weight Sharing (Parameter Sharing): The same filter slides across the whole
+      image, drastically reducing total trainable parameters.
+   3. Translation Invariance: An object is detected regardless of its location in
+      the image.
+
+Q: How does a Convolution operation work?
+A: A small matrix of weights (kernel/filter, e.g. 3x3) slides across the input image.
+   At each position, it computes element-wise multiplication between filter weights
+   and pixel values, sums them up, adds a bias, and outputs one value in the Feature Map.
+
+Q: What is the purpose of MaxPooling2D((2, 2))?
+A: Max Pooling slides a 2x2 window and keeps only the maximum value in each window.
+   - It downsamples the feature map dimensions by half (e.g. 26x26 -> 13x13).
+   - Reduces computation and memory by 75%.
+   - Controls overfitting by discarding minor spatial variations.
+
+Q: What does the Flatten layer do?
+A: It converts the multi-dimensional feature map (e.g., 13 x 13 x 32 = 5408 values)
+   into a single 1D vector (5408,) so it can be fed into standard Dense layers.
+
+Q: How is output dimension of Conv2D calculated?
+A: Output size = [ (Input_size - Kernel_size + 2 * Padding) / Stride ] + 1
+   For input 28, kernel 3, stride 1, padding 0 (valid):
+   Output = (28 - 3 + 0)/1 + 1 = 26x26.
+
+
+================================================================================
+4. GROUP 3: AUTOENCODERS FOR ANOMALY DETECTION
+================================================================================
+Problem Statements Covered:
+- 3A: Credit Card Fraud Detection (Kaggle Dataset)
+- 3C: Energy Consumption Anomaly Detection (Smart Grid Dataset - LSTM Autoencoder)
+- 3D: NASA Turbofan Engine Sensor Faults (NASA C-MAPSS - LSTM Autoencoder)
+- 3F: Sign Language MNIST Anomaly Detection (Alphabet classes)
+- ECG: Electrocardiogram Anomaly Detection Baseline
+
+Python Files:
+`ae_creditcard.py`, `ae_energy.py`, `ae_lstm_energy.py`, `ae_nasa.py`, `ae_lstm_nasa.py`,
+`ae_sign_mnist.py`, `ae_ecg.py`
+
+--------------------------------------------------------------------------------
+THE CORE PHILOSOPHY OF ANOMALY DETECTION (CRUCIAL FOR VIVA!)
+--------------------------------------------------------------------------------
+In real life (credit card fraud, engine breakdown, intrusions), anomalies are rare
+(less than 1% of data). Standard supervised classifiers fail due to severe class imbalance.
+
+THE UNSUPERVISED AUTOENCODER STRATEGY:
+1. FILTER: Train the Autoencoder ONLY on Normal / Non-Fraudulent / Healthy samples.
+2. COMPRESS: The network forces normal inputs through a low-dimensional "bottleneck"
+   (latent space) and learns to reconstruct them with minimal error.
+3. THRESHOLD: Calculate the reconstruction error on normal training samples.
+   Set threshold = 95th (or 99th) percentile of normal error.
+4. TEST: When an unseen sample arrives:
+   - If it is Normal -> The model has seen it before -> Low reconstruction error.
+   - If it is Fraud / Anomaly -> The model has never learned this pattern -> High error!
+   - If Error > Threshold => Flag as ANOMALY (1).
+
+--------------------------------------------------------------------------------
+DENSE AUTOENCODER ARCHITECTURE (3A Credit Card, ECG):
+--------------------------------------------------------------------------------
+Symmetric Hourglass shape:
+Input (N features)
+  -> Dense(32, relu)   [Encoder]
+  -> Dense(16, relu)
+  -> Dense(8, relu)    [BOTTLENECK - 8-dimensional compressed latent code]
+  -> Dense(16, relu)   [Decoder]
+  -> Dense(32, relu)
+  -> Dense(N, sigmoid) [Reconstructed output, scaled 0 to 1]
+
+Compile: `model.compile(optimizer="adam", loss="mae")`
+Fit: `model.fit(X_train_normal, X_train_normal, epochs=10, batch_size=64)`
+Notice: Target is X_train_normal itself (Self-Supervised learning)!
+
+--------------------------------------------------------------------------------
+LSTM AUTOENCODER FOR SEQUENTIAL / TIME-SERIES DATA (3C Energy, 3D NASA):
+--------------------------------------------------------------------------------
+Why LSTM?
+Energy usage and engine wear depend on time history. A single static reading cannot
+tell if a machine is failing—the temporal trend over the last T steps is what matters!
+
+1. Sliding Windowing:
+   Convert 2D table into 3D sequential array of shape: `(samples, T, features)`.
+   Window length T = 10 steps.
+2. Architecture:
+   ```python
+   model = keras.Sequential([
+       keras.layers.LSTM(32, activation="relu", input_shape=(T, n)),   # Encoder
+       keras.layers.RepeatVector(T),                                    # Latent state repeated T times
+       keras.layers.LSTM(32, activation="relu", return_sequences=True), # Decoder
+       keras.layers.TimeDistributed(keras.layers.Dense(n))              # Reconstruct each timestep
+   ])
+   ```
+
+--------------------------------------------------------------------------------
+VIVA QUESTIONS SPECIFIC TO GROUP 3
+--------------------------------------------------------------------------------
+Q: What is the Bottleneck layer in an Autoencoder?
+A: The bottleneck is the narrowest hidden layer with the smallest number of neurons.
+   It acts as an informational bottleneck, forcing the network to discard noise and
+   learn only the most salient, compressed latent representation of the data.
+
+Q: What is Reconstruction Error?
+A: It is the mathematical difference between the input sample x and the autoencoder's
+   reconstruction x_hat. Commonly measured using MAE (Mean Absolute Error) or MSE:
+       MAE = mean( |x - x_hat| )
+
+Q: Why set threshold at the 95th percentile?
+A: Setting threshold at the 95th percentile of normal training errors means that 95%
+   of normal transactions will have error below the threshold, tolerating a 5% false
+   alarm rate while catching severe anomalies whose errors are far higher.
+
+Q: What do `RepeatVector` and `TimeDistributed` do in LSTM Autoencoder?
+A: - `LSTM` encoder outputs a single 1D vector summarizing the whole 10-step sequence.
+   - `RepeatVector(10)` duplicates that 1D vector 10 times, creating a 2D sequence.
+   - `TimeDistributed(Dense(n))` applies the same reconstruction Dense layer
+     independently to each of the 10 timesteps.
+
+
+================================================================================
+5. GROUP 4: CONTINUOUS BAG OF WORDS (CBOW) & WORD2VEC (NLP)
+================================================================================
+Problem Statements Covered:
+- 4A: CBOW for Document Classification (IMDb movie sentiment)
+- 4B: CBOW for Twitter Dataset (Word embeddings evaluation)
+- 4C: CBOW for Textual Document (`document3.txt`)
+- 4D: Recommendation System with CBOW Word Embeddings
+
+Python Files:
+`cbow_4A_imdb.py`, `cbow_4B_twitter.py`, `cbow_4C_document.py`, `cbow_4D_recommend.py`
+
+--------------------------------------------------------------------------------
+HOW WORD2VEC & CBOW WORK
+--------------------------------------------------------------------------------
+Traditional One-Hot vectors represent words as sparse, high-dimensional vectors with
+no semantic relationship (the dot product between "king" and "queen" is 0).
+Word2Vec projects words into a dense vector space (e.g. 100 dimensions) where words
+appearing in similar contexts have vectors close together.
+
+CBOW (Continuous Bag of Words) vs Skip-Gram:
+* CBOW (`sg=0` in Gensim):
+  Predicts the TARGET word given its CONTEXT words.
+  Example: Context = ["The", "cat", "on", "the"] -> Target = "sat".
+  Faster to train, slightly better accuracy for frequent words.
+* Skip-Gram (`sg=1` in Gensim):
+  Predicts the surrounding CONTEXT words given a central TARGET word.
+  Better for smaller datasets and rare words.
+
+--------------------------------------------------------------------------------
+DOCUMENT REPRESENTATION VIA WORD VECTOR AVERAGING
+--------------------------------------------------------------------------------
+A document or tweet consists of multiple words. To represent an entire sentence as
+one 100-dimensional vector:
+    Document Vector = (1 / M) * sum( WordVector(w_i) )
+In Python:
+```python
+def document_vector(sentence):
+    words = [w for w in sentence if w in w2v.wv]
+    if len(words) == 0:
+        return np.zeros(100)
+    return np.mean(w2v.wv[words], axis=0)
+```
+
+--------------------------------------------------------------------------------
+HOW THE 4 PRACTICALS APPLY THIS:
+--------------------------------------------------------------------------------
+* 4B & 4C: Clean text (lowercase, regex remove punctuation, remove stop words).
+  Train `Word2Vec(sentences, vector_size=100, window=5, min_count=2, sg=0, epochs=10)`.
+  Test semantic properties:
+  `w2v.wv.most_similar("money")`
+  `w2v.wv.similarity("money", "economy")`
+* 4A (IMDb Classification):
+  Convert each movie review to its 100-d document vector.
+  Train a Feedforward Neural Network:
+  `Sequential([ Dense(64, 'relu'), Dense(32, 'relu'), Dense(1, 'sigmoid') ])`
+  Compiled with `loss="binary_crossentropy"` to classify Positive vs Negative reviews.
+* 4D (Recommendation System):
+  Convert all tweets to document vectors.
+  When user gives query e.g. "money economy business":
+  1. Compute query vector: `query_vec = document_vector(clean_text(query))`.
+  2. Compute Cosine Similarity between `query_vec` and all document vectors.
+  3. Sort by highest similarity and recommend top 5 matching items!
+
+--------------------------------------------------------------------------------
+VIVA QUESTIONS SPECIFIC TO GROUP 4
+--------------------------------------------------------------------------------
+Q: What does `sg=0` mean in Gensim Word2Vec?
+A: `sg` stands for Skip-Gram. When `sg=0`, the model uses CBOW (Continuous Bag of Words).
+   When `sg=1`, the model uses Skip-Gram.
+
+Q: What is the `window` parameter?
+A: The maximum distance between the current and predicted word within a sentence.
+   `window=5` means 5 words to the left and 5 words to the right of the target word.
+
+Q: What is `min_count`?
+A: Ignores all words with total frequency lower than this. `min_count=2` filters out
+   rare typos or one-off words.
+
+Q: What is Cosine Similarity? Why not Euclidean distance?
+A: Cosine similarity measures the cosine of the angle between two vectors:
+       Cosine Similarity(A, B) = (A . B) / ( ||A|| * ||B|| )
+   Range: -1 to 1 (1 means identical direction).
+   Advantage over Euclidean distance: Cosine similarity is magnitude-invariant.
+   A short review and a long review about the same topic will have similar angles
+   even though their Euclidean distance is large due to word counts.
+
+
+================================================================================
+6. GROUP 5: TRANSFER LEARNING & FINE-TUNING WITH VGG16
+================================================================================
+Problem Statements Covered:
+- 5A: Caltech-101 Dataset
+- 5B: Intel Image Classification Dataset
+- 5C: Fashion MNIST Dataset
+
+Python Files:
+`od_5A_caltech.py`, `od_5B_intel.py`, `od_5C_fashion.py`
+
+--------------------------------------------------------------------------------
+WHAT IS TRANSFER LEARNING?
+--------------------------------------------------------------------------------
+Training a deep CNN from scratch requires millions of labeled images and days of GPU
+computation.
+Transfer Learning takes a network (like VGG16) pre-trained on 1.4 million images
+(ImageNet dataset across 1,000 classes) and repurposes its learned feature detectors
+(edges, textures, shapes) for a new image classification task.
+
+--------------------------------------------------------------------------------
+THE TWO-STAGE TRAINING WORKFLOW (CRITICAL FOR VIVA!)
+--------------------------------------------------------------------------------
+Stage 1: Feature Extraction (Freeze the Base)
+   1. Load VGG16 without its top classification layers (`include_top=False`).
+   2. Freeze the base model: `base.trainable = False`.
+   3. Attach custom top layers:
+      `Flatten()` -> `Dense(256, relu)` -> `Dropout(0.5)` -> `Dense(num_classes, softmax)`.
+   4. Train for 5 epochs. Only the custom Dense layers update their weights;
+      the pre-trained VGG16 weights remain locked.
+
+Stage 2: Fine-Tuning (Unfreeze Top Base Layers)
+   1. Unfreeze the base: `base.trainable = True`.
+   2. Freeze all early layers, unfreezing ONLY the last 4 convolutional layers:
+      ```python
+      for layer in base.layers[:-4]:
+          layer.trainable = False
+      ```
+   3. Recompile with a VERY SMALL learning rate: `Adam(1e-5)`.
+   4. Retrain for 3 epochs. This allows the high-level filters of VGG16 to adapt
+      subtly to the specific nuances of the new dataset.
+
+--------------------------------------------------------------------------------
+VIVA QUESTIONS SPECIFIC TO GROUP 5
+--------------------------------------------------------------------------------
+Q: Why do we set `include_top=False` when loading VGG16?
+A: The "top" refers to the final 3 fully-connected layers designed for the 1,000
+   classes of ImageNet. Setting `include_top=False` strips these layers off, leaving
+   only the convolutional feature extractor, allowing us to attach our own Dense
+   layer with the exact number of classes for our problem.
+
+Q: Why do we use a very small learning rate (1e-5) during Fine-Tuning?
+A: The pre-trained weights in VGG16 are already well-optimized. A standard large
+   learning rate (like 1e-3) would cause massive gradient updates that destroy the
+   valuable learned features—an issue known as "Catastrophic Forgetting".
+
+Q: What does the Dropout(0.5) layer do?
+A: During each training step, Dropout randomly zeroes out 50% of the neurons.
+   This prevents neurons from co-adapting and forces the network to learn redundant,
+   robust representations, effectively combating overfitting.
+
+Q: Why use `sparse_categorical_crossentropy` here?
+A: Because `keras.utils.image_dataset_from_directory()` loads labels as integer
+   class indices (0, 1, 2, ...), rather than one-hot encoded vectors.
+
+
+================================================================================
+7. LAB SURVIVAL GUIDE: RUNNING CODES, COMMON ERRORS & FIXES
+================================================================================
+
+HOW TO RUN IN TERMINAL:
+1. Open Terminal, navigate to the folder:
+   cd /Users/tejas/Desktop/prac
+2. Activate your virtual environment:
+   source dl_env/bin/activate
+3. Run the target script:
+   python fnn_1A_mnist.py
+
+HOW TO RUN IN JUPYTER NOTEBOOK:
+1. Start Jupyter:
+   jupyter notebook
+2. Create or open notebook.
+3. Top Menu -> Kernel -> Change Kernel -> Select "Python (DL Environment)".
+4. One-line run shortcut in any cell:
+   %run fnn_1A_mnist.py
+   (All code executes, outputs print, and plots render inline!)
+
+COMMON ERRORS & HOW TO FIX THEM INSTANTLY IN LAB:
+--------------------------------------------------------------------------------
+1. `ModuleNotFoundError: No module named 'tensorflow'`
+   Cause: Jupyter is running on the wrong Python kernel.
+   Fix: Click Kernel -> Change Kernel -> Select "Python (DL Environment)".
+
+2. `FileNotFoundError: [Errno 2] No such file or directory: '...'`
+   Cause: The script is looking for dataset folders relative to current directory.
+   Fix: Ensure Jupyter or Terminal was launched from the folder containing the datasets
+   (`cd /Users/tejas/Desktop/prac`). On Linux machines, check folder name casing
+   (e.g., `Fashion MNIST` vs `fashion mnist`).
+
+3. `ValueError: Shapes (None, 10) and (None, 1) are incompatible`
+   Cause: Mismatch between one-hot encoded targets and loss function.
+   Fix: If targets are one-hot encoded, use `categorical_crossentropy`.
+        If targets are integer numbers, use `sparse_categorical_crossentropy`.
+
+4. Plot Window Freezes Terminal:
+   Cause: `plt.show()` opens a blocking GUI window.
+   Fix: Close the popup window to let the script finish, or in Jupyter, plots
+   will automatically appear inline without blocking.
+================================================================================
+                              ALL THE BEST FOR YOUR EXAM!
+================================================================================
+
+
+
+================================================================================
+                    SPPU BE IT 2019 PATTERN (2026-27)
+             DEEP LEARNING LP-IV VIVA INTERVIEW PREPARATION GUIDE
+================================================================================
+
+Prepared for: Deep Learning LP-IV Practical Viva – SPPU BE IT 2019 Pattern (2026–27)
+
+Major Practical Sections:
+1. Feedforward Neural Networks (FNN)
+2. Convolutional Neural Networks (CNN)
+3. Autoencoders and Anomaly Detection
+4. CBOW and Word Embeddings
+5. Transfer Learning using VGG and ResNet
+
+
+PART 1 — DEEP LEARNING FUNDAMENTALS
+--------------------------------------------------------------------------------
+
+1. What is Artificial Intelligence?
+Artificial Intelligence is the ability of machines to perform tasks that normally
+require human intelligence.
+Examples: Face recognition, ChatGPT, Self-driving cars, Voice assistants, Recommendation systems.
+
+2. What is Machine Learning?
+Machine Learning is a subset of AI in which computers learn patterns from data
+instead of being explicitly programmed for every situation.
+Example: Given 1,000 labelled emails (Spam / Not Spam), the algorithm learns patterns
+and predicts whether a new incoming email is spam.
+
+3. What is Deep Learning?
+Deep Learning is a subset of Machine Learning that uses artificial neural networks
+with multiple layers to learn complex patterns from large amounts of data.
+Examples: Image recognition, Speech recognition, NLP, Medical image analysis.
+
+Hierarchy:
+Artificial Intelligence
+        |
+        └── Machine Learning
+                  |
+                  └── Deep Learning
+
+Viva question: Why is it called Deep Learning?
+Because the neural network contains multiple hidden layers that learn increasingly
+complex hierarchical representations of input data.
+Example in image recognition:
+- First layers learn edges.
+- Middle layers learn shapes and textures.
+- Deeper layers learn complex objects such as faces, cars, and animals.
+
+
+PART 2 — NEURAL NETWORKS
+--------------------------------------------------------------------------------
+
+4. What is an Artificial Neural Network?
+An Artificial Neural Network (ANN) is a computational model inspired by the human brain.
+It consists of interconnected artificial neurons across three main layers:
+1. Input layer
+2. Hidden layer(s)
+3. Output layer
+
+5. What is a neuron?
+A neuron is the basic computational unit of a neural network. It receives inputs,
+multiplies them by weights, adds a bias, and applies an activation function:
+    z = w_1*x_1 + w_2*x_2 + ... + w_n*x_n + b
+    Output = f(z)
+Where: x = input, w = weight, b = bias, f = activation function.
+
+6. What are weights?
+Weights determine the importance/strength of each input in the network.
+Weights are learnable parameters updated during backpropagation.
+
+7. What is bias?
+Bias is an additional learnable parameter that allows a neuron to shift its output
+independently of its inputs (shifts the activation curve left/right).
+
+8. What is an activation function?
+Introduces non-linearity so deep networks can learn non-linear patterns.
+- ReLU: max(0, x) -> Hidden layers (fast, prevents vanishing gradient).
+- Sigmoid: 1 / (1 + e^-x) -> Binary classification & autoencoder normalized output.
+- Tanh: range -1 to +1 -> Hidden layers (zero-centered).
+- Softmax: normalized exponentials -> Multiclass probability distribution.
+
+9. What is forward propagation?
+Passing input forward through layers to compute intermediate activations and final predictions.
+
+10. What is backpropagation?
+Calculating gradients of the loss function with respect to weights and biases using
+the chain rule of calculus, allowing the optimizer to update them.
+
+11. What is Gradient Descent?
+Optimization algorithm minimizing loss: W_new = W_old - (learning_rate * dL/dW).
+Learning rate (eta) determines step size during updates.
+
+
+PART 3 — FEEDFORWARD NEURAL NETWORK (FNN)
+--------------------------------------------------------------------------------
+
+12. What is FNN?
+Information moves strictly in one direction (Input -> Hidden -> Output) with no cycles.
+
+13. Datasets:
+- MNIST: 60k train, 10k test, 28x28 grayscale (784 pixels), 10 digit classes (0-9).
+- Fashion-MNIST: 60k train, 10k test, 28x28 grayscale (784 pixels), 10 clothing classes.
+- CIFAR-10: 50k train, 10k test, 32x32 RGB color (3072 pixels), 10 object classes.
+- Sign Language MNIST: 28x28 grayscale, 24 alphabet gesture classes.
+
+14. Epoch vs Batch Size:
+- Epoch: One complete pass over the full training dataset.
+- Batch Size: Number of samples processed before updating weights.
+- Iterations per epoch = Total Samples / Batch Size.
+
+15. SGD vs Adam:
+- SGD: Basic stochastic gradient descent minibatches.
+- Adam: Adaptive Moment Estimation (combines Momentum + RMSprop with adaptive learning rates).
+
+
+PART 4 — CONVOLUTIONAL NEURAL NETWORK (CNN)
+--------------------------------------------------------------------------------
+
+16. Main CNN Components:
+1. Convolution Layer: Extracts feature maps using sliding learnable filters/kernels.
+2. ReLU: Adds non-linearity.
+3. Pooling Layer (MaxPooling): Reduces spatial dimensions, downsampling while retaining features.
+4. Flatten: Converts multi-dimensional feature maps into 1D vector.
+5. Dense + Softmax: Fully connected classification layers.
+
+17. Why CNN over FNN for images?
+- Preserves 2D/3D spatial grid structure.
+- Local receptive fields + weight sharing (fewer parameters).
+- Translation invariance.
+
+
+PART 5 — AUTOENCODERS AND ANOMALY DETECTION
+--------------------------------------------------------------------------------
+
+18. What is an Autoencoder?
+Unsupervised neural network trained to compress input into a bottleneck (latent code)
+and reconstruct the original input (Encoder -> Bottleneck -> Decoder).
+
+19. How Autoencoders Detect Anomaly / Fraud:
+1. Train ONLY on normal data (due to severe class imbalance, e.g. 99% normal, 1% fraud).
+2. The network learns normal spending/operating patterns.
+3. Unseen abnormal samples reconstruct poorly -> High Reconstruction Error (MSE/MAE).
+4. Error > Threshold (95th percentile of normal) => Flag as Anomaly / Fault!
+
+20. Why is accuracy misleading in fraud detection?
+In 99% normal data, a dummy model predicting "normal" always achieves 99% accuracy
+but catches 0% fraud. Precision, Recall, and F1-score are necessary.
+
+
+PART 6 — LSTM AUTOENCODER
+--------------------------------------------------------------------------------
+
+21. What is LSTM?
+Long Short-Term Memory network designed for sequential/time-series data.
+Uses 3 gates: Forget Gate, Input Gate, Output Gate to solve vanishing gradients.
+
+22. Application in Energy (3C) & NASA Turbofans (3D):
+Monitors sequential time windows (T=10 timesteps) to detect temporal degradation
+and unusual consumption spikes.
+
+
+PART 7 — CBOW AND WORD EMBEDDINGS (NLP)
+--------------------------------------------------------------------------------
+
+23. Word2Vec: Dense vector representations where semantically related words are close.
+- CBOW (sg=0): Predicts target word from surrounding context words.
+- Skip-Gram (sg=1): Predicts context words from central target word.
+
+24. Document Vector:
+Averaging the learned word vectors of all words in the document.
+
+25. Cosine Similarity:
+Measures cosine of angle between two vectors: Cosine(A, B) = (A . B) / (||A|| * ||B||).
+Used for content-based recommendations (4D).
+
+
+PART 8 — TRANSFER LEARNING & FINE-TUNING
+--------------------------------------------------------------------------------
+
+26. Transfer Learning:
+Reusing a deep model (VGG16/ResNet) pretrained on ImageNet (1.4M images, 1000 classes)
+for a new vision task.
+
+27. Feature Extraction vs Fine-Tuning:
+- Feature Extraction: Base model is frozen (trainable=False). Only custom dense layers train.
+- Fine-Tuning: Top convolutional layers are unfrozen and trained with a tiny learning rate
+  (1e-5) to adapt high-level features without catastrophic forgetting.
+
+
+PART 9 — TOP 25 RAPID-FIRE VIVA QUESTIONS
+--------------------------------------------------------------------------------
+1. What is Deep Learning? -> ML using multilayer artificial neural networks.
+2. What is ANN? -> Artificial Neural Network.
+3. What is a neuron? -> Basic computational unit: sum(w*x) + b passed through activation.
+4. What is an epoch? -> One complete pass through the entire training dataset.
+5. What is batch size? -> Number of samples processed before updating weights.
+6. What is learning rate? -> Step size the optimizer takes when updating weights.
+7. What is an optimizer? -> Algorithm that updates parameters to minimize loss (SGD, Adam).
+8. What is SGD? -> Stochastic Gradient Descent.
+9. What is Adam? -> Adaptive Moment Estimation.
+10. What is ReLU? -> max(0, x), hidden layer activation preventing vanishing gradient.
+11. What is Softmax? -> Converts raw output logits into normalized class probabilities summing to 1.
+12. What is backpropagation? -> Calculating gradients of loss w.r.t parameters using chain rule.
+13. What is CNN? -> Convolutional Neural Network specialized for spatial/grid data.
+14. What is a kernel/filter? -> Small matrix that convolves over an image to extract features.
+15. What is pooling? -> Reduces spatial dimensions of feature maps (e.g. 2x2 MaxPooling).
+16. What is Flatten? -> Reshapes multi-dimensional feature map into a 1D vector.
+17. What is an Autoencoder? -> Unsupervised network that compresses and reconstructs input.
+18. What is bottleneck? -> The low-dimensional latent representation layer.
+19. What is anomaly detection? -> Identifying patterns that deviate significantly from expected normal behavior.
+20. What is LSTM? -> Long Short-Term Memory network for sequential and time-series data.
+21. What is CBOW? -> Continuous Bag of Words; predicts target word from context words.
+22. What is Skip-gram? -> Predicts surrounding context words from a target word.
+23. What is Word2Vec? -> Neural framework to learn dense distributed word representations.
+24. What is Transfer Learning? -> Reusing knowledge/weights from a pretrained model on a new task.
+25. What is Fine-Tuning? -> Retraining top layers of a pretrained base with a small learning rate.
+================================================================================
